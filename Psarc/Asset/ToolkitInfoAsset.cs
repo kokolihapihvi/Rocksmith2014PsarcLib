@@ -20,7 +20,7 @@ namespace Rocksmith2014PsarcLib.Psarc.Asset
             else
             {
                 //Go through all lines and parse "key: value" pairs
-                foreach (string line in Lines)
+                foreach (var line in Lines)
                 {
                     var tokens = line.Split(':');
 

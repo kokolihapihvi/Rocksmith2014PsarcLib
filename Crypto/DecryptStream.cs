@@ -72,7 +72,7 @@ namespace Rocksmith2014PsarcLib.Crypto
 
         private void InitializePsarcDecryptor(Stream input, long position, long length)
         {
-            _decryptedStream = new MemoryStream();
+            _decryptedStream = new MemoryStream((int)length);
 
             //Setup decrypting stream
             using (var decryptor = new RijndaelManaged())
@@ -86,11 +86,11 @@ namespace Rocksmith2014PsarcLib.Crypto
                 using (var decryptStream = new CryptoStream(_decryptedStream, decryptor.CreateDecryptor(), CryptoStreamMode.Write))
                 {
                     var buffer = new byte[512];
-                    int pad = buffer.Length - (int)(length % buffer.Length);
+                    var pad = buffer.Length - (int)(length % buffer.Length);
 
                     while (input.Position < length)
                     {
-                        int size = (int)Math.Min(length - input.Position, buffer.Length);
+                        var size = (int)Math.Min(length - input.Position, buffer.Length);
                         input.Read(buffer, 0, size);
                         decryptStream.Write(buffer, 0, size);
                     }
@@ -108,9 +108,9 @@ namespace Rocksmith2014PsarcLib.Crypto
 
         private void InitializeSngDecryptor(Stream input, long position, long length)
         {
-            SngAsset.AssetFlags sngFlags = SngAsset.AssetFlags.None;
+            var sngFlags = SngAsset.AssetFlags.None;
 
-            byte[] decryptIV = new byte[16];
+            var decryptIV = new byte[16];
 
             //Check and prepare for sng decrypting
             using (var rdr = new BinaryReader(input, System.Text.Encoding.Default, true))
@@ -171,26 +171,23 @@ namespace Rocksmith2014PsarcLib.Crypto
         /// <param name="salt"></param>
         /// <param name="inputStream"></param>
         /// <param name="outputStream"></param>
-        private void AesCtrTransform(byte[] key, byte[] salt, Stream inputStream, Stream outputStream)
+        private static void AesCtrTransform(byte[] key, byte[] salt, Stream inputStream, Stream outputStream)
         {
             SymmetricAlgorithm aes = new AesManaged { Mode = CipherMode.ECB, Padding = PaddingMode.None };
 
-            int blockSize = aes.BlockSize / 8;
+            var blockSize = aes.BlockSize / 8;
 
             if (salt.Length != blockSize)
             {
-                throw new ArgumentException(
-                    string.Format(
-                        "Salt size must be same as block size (actual: {0}, expected: {1})",
-                        salt.Length, blockSize));
+                throw new ArgumentException($"Salt size must be same as block size (actual: {salt.Length}, expected: {blockSize})");
             }
 
-            byte[] counter = (byte[])salt.Clone();
+            var counter = (byte[])salt.Clone();
 
-            Queue<byte> xorMask = new Queue<byte>();
+            var xorMask = new Queue<byte>();
 
             var zeroIv = new byte[blockSize];
-            ICryptoTransform counterEncryptor = aes.CreateEncryptor(key, zeroIv);
+            var counterEncryptor = aes.CreateEncryptor(key, zeroIv);
 
             int b;
             while ((b = inputStream.ReadByte()) != -1)

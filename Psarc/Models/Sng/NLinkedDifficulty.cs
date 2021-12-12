@@ -16,7 +16,7 @@ namespace Rocksmith2014PsarcLib.Psarc.Models.Sng
 
             NLD_Phrase = new int[PhraseCount];
 
-            for (int i = 0; i < NLD_Phrase.Length; i++) NLD_Phrase[i] = reader.ReadInt32();
+            for (var i = 0; i < NLD_Phrase.Length; i++) NLD_Phrase[i] = reader.ReadInt32();
 
             return this;
         }

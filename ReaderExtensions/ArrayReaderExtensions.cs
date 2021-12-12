@@ -7,16 +7,16 @@ namespace Rocksmith2014PsarcLib.ReaderExtensions
         /// <summary>
         /// Read an array of count floats
         /// </summary>
-        /// <param name="_reader"></param>
+        /// <param name="reader"></param>
         /// <param name="count"></param>
         /// <returns></returns>
-        public static float[] ReadFloatArray(this BinaryReader _reader, int count)
+        public static float[] ReadFloatArray(this BinaryReader reader, int count)
         {
-            float[] arr = new float[count];
+            var arr = new float[count];
 
-            for (int i = 0; i < arr.Length; i++)
+            for (var i = 0; i < arr.Length; i++)
             {
-                arr[i] = _reader.ReadSingle();
+                arr[i] = reader.ReadSingle();
             }
 
             return arr;
@@ -25,16 +25,16 @@ namespace Rocksmith2014PsarcLib.ReaderExtensions
         /// <summary>
         /// Read an array of count ints
         /// </summary>
-        /// <param name="_reader"></param>
+        /// <param name="reader"></param>
         /// <param name="count"></param>
         /// <returns></returns>
-        public static int[] ReadIntArray(this BinaryReader _reader, int count)
+        public static int[] ReadIntArray(this BinaryReader reader, int count)
         {
-            int[] arr = new int[count];
+            var arr = new int[count];
 
-            for (int i = 0; i < arr.Length; i++)
+            for (var i = 0; i < arr.Length; i++)
             {
-                arr[i] = _reader.ReadInt32();
+                arr[i] = reader.ReadInt32();
             }
 
             return arr;
@@ -43,16 +43,16 @@ namespace Rocksmith2014PsarcLib.ReaderExtensions
         /// <summary>
         /// Read an array of count shorts
         /// </summary>
-        /// <param name="_reader"></param>
+        /// <param name="reader"></param>
         /// <param name="count"></param>
         /// <returns></returns>
-        public static short[] ReadShortArray(this BinaryReader _reader, int count)
+        public static short[] ReadShortArray(this BinaryReader reader, int count)
         {
-            short[] arr = new short[count];
+            var arr = new short[count];
 
-            for (int i = 0; i < arr.Length; i++)
+            for (var i = 0; i < arr.Length; i++)
             {
-                arr[i] = _reader.ReadInt16();
+                arr[i] = reader.ReadInt16();
             }
 
             return arr;
