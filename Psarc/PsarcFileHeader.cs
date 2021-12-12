@@ -18,21 +18,21 @@ namespace Rocksmith2014PsarcLib.Psarc
 
         public PsarcFileHeader(PsarcFile psarcFile)
         {
-            var _reader = psarcFile._reader;
+            var reader = psarcFile.Reader;
 
             //Seek to the beginning
-            _reader.BaseStream.Seek(0, SeekOrigin.Begin);
+            reader.BaseStream.Seek(0, SeekOrigin.Begin);
 
-            Identifier = Encoding.ASCII.GetString(_reader.ReadBytes(4));
-            Version = _reader.ReadUInt32BE();
-            Compression = Encoding.ASCII.GetString(_reader.ReadBytes(4));
-            TOCSize = _reader.ReadUInt32BE();
-            TOCEntrySize = _reader.ReadUInt32BE(); // -32?
-            EntryCount = _reader.ReadUInt32BE();
-            BlockSize = _reader.ReadUInt32BE();
-            ArchiveFlags = (PsarcArchiveFlags)_reader.ReadUInt32BE();
+            Identifier = Encoding.ASCII.GetString(reader.ReadBytes(4));
+            Version = reader.ReadUInt32Be();
+            Compression = Encoding.ASCII.GetString(reader.ReadBytes(4));
+            TOCSize = reader.ReadUInt32Be();
+            TOCEntrySize = reader.ReadUInt32Be(); // -32?
+            EntryCount = reader.ReadUInt32Be();
+            BlockSize = reader.ReadUInt32Be();
+            ArchiveFlags = (PsarcArchiveFlags)reader.ReadUInt32Be();
 
-            TOCOffset = _reader.BaseStream.Position;
+            TOCOffset = reader.BaseStream.Position;
         }
     }
 }

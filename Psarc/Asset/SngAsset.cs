@@ -41,7 +41,7 @@ namespace Rocksmith2014PsarcLib.Psarc.Asset
             base.ReadFrom(stream);
 
             //Decrypt/uncompress
-            using (var dcStream = new DecryptStream(stream, DecryptStream.DecryptMode.SNG, 0, stream.Length))
+            using (var dcStream = new DecryptStream(stream, DecryptStream.DecryptMode.SNG, stream.Length))
             {
                 //Read beats
                 BPMs = dcStream.Reader.ReadStructArray<Bpm>();

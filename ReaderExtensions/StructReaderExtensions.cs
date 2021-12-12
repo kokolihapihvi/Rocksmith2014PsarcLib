@@ -1,4 +1,5 @@
-﻿using Rocksmith2014PsarcLib.Psarc.Models;
+﻿using System.Buffers;
+using Rocksmith2014PsarcLib.Psarc.Models;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -56,13 +57,17 @@ namespace Rocksmith2014PsarcLib.ReaderExtensions
             }
 
             var size = Marshal.SizeOf(typeof(T));
-            var readBuffer = reader.ReadBytes(size);
+
+            var readBuffer = ArrayPool<byte>.Shared.Rent(size);
+            reader.Read(readBuffer, 0, size);
 
             var handle = GCHandle.Alloc(readBuffer, GCHandleType.Pinned);
 
             _struct = Marshal.PtrToStructure<T>(handle.AddrOfPinnedObject());
 
             handle.Free();
+            
+            ArrayPool<byte>.Shared.Return(readBuffer);
 
             return _struct;
         }

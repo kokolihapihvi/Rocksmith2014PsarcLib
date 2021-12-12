@@ -7,23 +7,20 @@ namespace Rocksmith2014PsarcLib.Psarc.Asset
     {
         public T JsonObject { get; private set; }
 
+        private static JsonSerializer Serializer { get; } = new JsonSerializer
+        {
+            TypeNameHandling = TypeNameHandling.None,
+            MetadataPropertyHandling = MetadataPropertyHandling.Ignore
+        };
+
         public override void ReadFrom(MemoryStream stream)
         {
             base.ReadFrom(stream);
+            
+            using var reader = new StreamReader(stream);
+            using var jsonReader = new JsonTextReader(reader);
 
-            using (var reader = new StreamReader(stream))
-            {
-                using (var jsonReader = new JsonTextReader(reader))
-                {
-                    var serializer = new JsonSerializer
-                    {
-                        TypeNameHandling = TypeNameHandling.None,
-                        MetadataPropertyHandling = MetadataPropertyHandling.Ignore
-                    };
-
-                    JsonObject = serializer.Deserialize<T>(jsonReader);
-                }
-            }
+            JsonObject = Serializer.Deserialize<T>(jsonReader);
         }
     }
 }

@@ -5,39 +5,75 @@ namespace Rocksmith2014PsarcLib.ReaderExtensions
 {
     public static class BigEndianReaderExtensions
     {
-        public static byte[] ReadBytesBE(this BinaryReader _reader, int count)
+        /// <summary>
+        /// Read bytes in big endian (reverse byte order)
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <param name="span"></param>
+        private static void ReadBytesBe(this BinaryReader reader, Span<byte> span)
         {
-            byte[] bytes = _reader.ReadBytes(count);
-            Array.Reverse(bytes);
-            return bytes;
+            reader.Read(span);
+            span.Reverse();
         }
 
-        public static uint ReadUInt16BE(this BinaryReader _reader)
+        /// <summary>
+        /// Read a 2 byte unsigned int in big endian (reverse byte order)
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <returns></returns>
+        public static ushort ReadUInt16Be(this BinaryReader reader)
         {
-            return BitConverter.ToUInt16(_reader.ReadBytesBE(2), 0);
+            Span<byte> span = stackalloc byte[2];
+            reader.ReadBytesBe(span);
+            
+            return BitConverter.ToUInt16(span);
         }
 
-        public static uint ReadUInt24BE(this BinaryReader _reader)
+        /// <summary>
+        /// Read a 3 byte unsigned int in big endian (reverse byte order)
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <returns></returns>
+        public static uint ReadUInt24Be(this BinaryReader reader)
         {
             //3 bytes
-            byte[] bytes = new byte[4];
+            var bytes = new byte[4];
+            
+            Span<byte> span = stackalloc byte[3];
+            reader.ReadBytesBe(span);
 
-            Array.Copy(_reader.ReadBytesBE(3), bytes, 3);
+            span.CopyTo(bytes);
 
             return BitConverter.ToUInt32(bytes, 0);
         }
 
-        public static uint ReadUInt32BE(this BinaryReader _reader)
+        /// <summary>
+        /// Read a 4 byte unsigned int in big endian (reverse byte order)
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <returns></returns>
+        public static uint ReadUInt32Be(this BinaryReader reader)
         {
-            return BitConverter.ToUInt32(_reader.ReadBytesBE(4), 0);
+            Span<byte> span = stackalloc byte[4];
+            reader.ReadBytesBe(span);
+            
+            return BitConverter.ToUInt32(span);
         }
 
-        public static ulong ReadUInt40BE(this BinaryReader _reader)
+        /// <summary>
+        /// Read a 5 byte unsigned int in big endian (reverse byte order)
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <returns></returns>
+        public static ulong ReadUInt40Be(this BinaryReader reader)
         {
             //5 bytes
-            byte[] bytes = new byte[8];
+            var bytes = new byte[8];
+            
+            Span<byte> span = stackalloc byte[5];
+            reader.ReadBytesBe(span);
 
-            Array.Copy(_reader.ReadBytesBE(5), bytes, 5);
+            span.CopyTo(bytes);
 
             return BitConverter.ToUInt64(bytes, 0);
         }

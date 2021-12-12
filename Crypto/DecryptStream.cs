@@ -1,6 +1,7 @@
 ﻿using Org.BouncyCastle.Utilities.Zlib;
 using Rocksmith2014PsarcLib.Psarc.Asset;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -53,24 +54,24 @@ namespace Rocksmith2014PsarcLib.Crypto
 
         private MemoryStream _decryptedStream;
 
-        public DecryptStream(Stream input, DecryptMode mode, long position, long length)
+        public DecryptStream(Stream input, DecryptMode mode, long length)
         {
             Mode = mode;
 
             switch (Mode)
             {
                 case DecryptMode.PSARC:
-                    InitializePsarcDecryptor(input, position, length);
+                    InitializePsarcDecryptor(input, length);
                     break;
                 case DecryptMode.SNG:
-                    InitializeSngDecryptor(input, position, length);
+                    InitializeSngDecryptor(input, length);
                     break;
                 default:
-                    throw new ArgumentException("Invalid decrypt mode", "mode");
+                    throw new ArgumentException("Invalid decrypt mode", nameof(mode));
             }
         }
 
-        private void InitializePsarcDecryptor(Stream input, long position, long length)
+        private void InitializePsarcDecryptor(Stream input, long length)
         {
             _decryptedStream = new MemoryStream((int)length);
 
@@ -106,7 +107,7 @@ namespace Rocksmith2014PsarcLib.Crypto
             Reader = new BinaryReader(_decryptedStream);
         }
 
-        private void InitializeSngDecryptor(Stream input, long position, long length)
+        private void InitializeSngDecryptor(Stream input, long length)
         {
             var sngFlags = SngAsset.AssetFlags.None;
 
@@ -131,7 +132,7 @@ namespace Rocksmith2014PsarcLib.Crypto
                 length -= 24;
             }
 
-            _decryptedStream = new MemoryStream();
+            _decryptedStream = new MemoryStream((int)length);
 
             // Decrypt using aes counter mode
             AesCtrTransform(SngKeyPC, decryptIV, input, _decryptedStream);
@@ -147,7 +148,7 @@ namespace Rocksmith2014PsarcLib.Crypto
                 _decryptedStream.Seek(4, SeekOrigin.Begin);
                 using (var zOutputStream = new ZInputStream(_decryptedStream))
                 {
-                    var unzippedStream = new MemoryStream();
+                    var unzippedStream = new MemoryStream((int)uncompressedSize);
 
                     zOutputStream.CopyTo(unzippedStream);
 
@@ -158,7 +159,7 @@ namespace Rocksmith2014PsarcLib.Crypto
 
                     Reader = new BinaryReader(unzippedStream);
                 }
-
+                
                 _decryptedStream.Dispose();
             }
         }
@@ -189,15 +190,14 @@ namespace Rocksmith2014PsarcLib.Crypto
             var zeroIv = new byte[blockSize];
             var counterEncryptor = aes.CreateEncryptor(key, zeroIv);
 
+            var counterModeBlock = ArrayPool<byte>.Shared.Rent(blockSize);
+
             int b;
             while ((b = inputStream.ReadByte()) != -1)
             {
                 if (xorMask.Count == 0)
                 {
-                    var counterModeBlock = new byte[blockSize];
-
-                    counterEncryptor.TransformBlock(
-                        counter, 0, counter.Length, counterModeBlock, 0);
+                    counterEncryptor.TransformBlock(counter, 0, counter.Length, counterModeBlock, 0);
 
                     for (var i2 = counter.Length - 1; i2 >= 0; i2--)
                     {
@@ -207,8 +207,9 @@ namespace Rocksmith2014PsarcLib.Crypto
                         }
                     }
 
-                    foreach (var b2 in counterModeBlock)
+                    for (var index = 0; index < blockSize; index++)
                     {
+                        var b2 = counterModeBlock[index];
                         xorMask.Enqueue(b2);
                     }
                 }
@@ -216,6 +217,8 @@ namespace Rocksmith2014PsarcLib.Crypto
                 var mask = xorMask.Dequeue();
                 outputStream.WriteByte((byte)(((byte)b) ^ mask));
             }
+            
+            ArrayPool<byte>.Shared.Return(counterModeBlock);
         }
 
         #region Disposable

@@ -4,33 +4,35 @@ using Rocksmith2014PsarcLib.Psarc.Models;
 using Rocksmith2014PsarcLib.Psarc.Models.Json;
 using Rocksmith2014PsarcLib.ReaderExtensions;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 
 namespace Rocksmith2014PsarcLib.Psarc
 {
     public class PsarcFile : IDisposable
     {
-        public string FilePath { get; private set; }
+        public string FilePath { get; }
 
-        public PsarcFileHeader Header { get; private set; }
+        public PsarcFileHeader Header { get; }
 
-        public PsarcTOC TOC { get; private set; }
+        public PsarcTOC TOC { get; }
 
-        internal FileStream _fileStream;
+        internal FileStream FileStream { get; }
 
-        internal BinaryReader _reader;
+        internal BinaryReader Reader { get; }
 
         public PsarcFile(string filePath)
         {
             FilePath = filePath;
 
             // Setup file stream
-            _fileStream = File.OpenRead(filePath);
+            FileStream = File.OpenRead(filePath);
 
             // Setup reader
-            _reader = new BinaryReader(_fileStream);
+            Reader = new BinaryReader(FileStream);
 
             // Read header
             Header = new PsarcFileHeader(this);
@@ -41,7 +43,10 @@ namespace Rocksmith2014PsarcLib.Psarc
             // Read manifest
             ReadManifest();
         }
-        public PsarcFile(FileInfo fileInfo) : this(fileInfo.FullName) { }
+
+        public PsarcFile(FileInfo fileInfo) : this(fileInfo.FullName)
+        {
+        }
 
         /// <summary>
         /// Reads the filepath of all assets inside the psarc
@@ -54,7 +59,7 @@ namespace Rocksmith2014PsarcLib.Psarc
 
             var names = asset.Lines;
 
-            for (int i = 0; i < names.Length; i++)
+            for (var i = 0; i < names.Length; i++)
             {
                 TOC.Entries[i + 1].Path = names[i];
             }
@@ -67,17 +72,31 @@ namespace Rocksmith2014PsarcLib.Psarc
         /// <returns></returns>
         private byte[] UnzipBlock(byte[] zipped)
         {
-            using (var inStream = new MemoryStream(zipped))
-            {
-                using (var zOutputStream = new ZInputStream(inStream))
-                {
-                    using (var outStream = new MemoryStream())
-                    {
-                        zOutputStream.CopyTo(outStream);
+            using var inStream = new MemoryStream(zipped);
+            using var zOutputStream = new ZInputStream(inStream);
+            using var outStream = new MemoryStream();
 
-                        return outStream.ToArray();
-                    }
-                }
+            zOutputStream.CopyTo(outStream);
+
+            return outStream.ToArray();
+        }
+
+        private unsafe void UnzipBlock(BinaryReader from, Stream to, int size)
+        {
+            // Skip the header bytes, because DeflateStream does not recognize them for some reason
+            var readsize = size - 2;
+            Reader.BaseStream.Seek(2, SeekOrigin.Current);
+
+            Span<byte> span = stackalloc byte[readsize];
+
+            from.Read(span);
+
+            fixed (byte* pBuffer = &span[0])
+            {
+                using var inStream = new UnmanagedMemoryStream(pBuffer, span.Length);
+                using var decompressStream = new DeflateStream(inStream, CompressionMode.Decompress);
+
+                decompressStream.CopyTo(to);
             }
         }
 
@@ -89,31 +108,38 @@ namespace Rocksmith2014PsarcLib.Psarc
         public void InflateEntry(PsarcTOCEntry entry, Stream stream)
         {
             const int ZipHeader = 0x78DA;
-            int blockSize = (int)Header.BlockSize;
+            var blockSize = (int)Header.BlockSize;
 
-            int lastBlock = (int)(Math.Ceiling(entry.Length / (float)Header.BlockSize) + entry.StartBlock - 1);
+            var lastBlock = (int)(Math.Ceiling(entry.Length / (float)Header.BlockSize) + entry.StartBlock - 1);
 
-            _reader.BaseStream.Seek((long)entry.Offset, SeekOrigin.Begin);
+            Reader.BaseStream.Seek((long)entry.Offset, SeekOrigin.Begin);
 
-            for (uint block = entry.StartBlock; block <= lastBlock; block++)
+            Span<byte> buffer = stackalloc byte[blockSize];
+
+            for (var block = entry.StartBlock; block <= lastBlock; block++)
             {
-                if (TOC.ZipBlockSizes[block] == 0U) // raw. full cluster used.
+                // Size of this zip block (0 for uncompressed)
+                var zipblockSize = (int)TOC.ZipBlockSizes[block];
+
+                if (zipblockSize == 0) // raw. full cluster used.
                 {
-                    stream.Write(_reader.ReadBytes(blockSize), 0, blockSize);
+                    Reader.Read(buffer);
+                    stream.Write(buffer);
                 }
                 else
                 {
-                    var header = _reader.ReadUInt16BE();
-                    _reader.BaseStream.Seek(-2, SeekOrigin.Current);
-
-                    var array = _reader.ReadBytes((int)TOC.ZipBlockSizes[block]);
+                    var header = Reader.ReadUInt16Be();
+                    // Seek 2 bytes backwards to include the header (or first 2 data bytes) still in the stream
+                    Reader.BaseStream.Seek(-2, SeekOrigin.Current);
 
                     if (header == ZipHeader) // compressed
                     {
-                        array = UnzipBlock(array);
+                        UnzipBlock(Reader, stream, zipblockSize);
                     }
-
-                    stream.Write(array, 0, array.Length);
+                    else // uncompressed block
+                    {
+                        stream.Write(Reader.ReadBytes(zipblockSize), 0, zipblockSize);
+                    }
                 }
             }
 
@@ -131,13 +157,30 @@ namespace Rocksmith2014PsarcLib.Psarc
         {
             if (entry == null) return null;
 
-            T asset = new T();
+            var asset = new T();
 
-            using (var ms = new MemoryStream(new byte[entry.Length], true))
+            // Rent a buffer for inflating
+            var inflatebuffer = ArrayPool<byte>.Shared.Rent((int)entry.Length);
+
+            using var ms = new MemoryStream(inflatebuffer);
+            // Resize the stream, as the buffer may be larger
+            ms.SetLength((int)entry.Length);
+
+            try
             {
                 InflateEntry(entry, ms);
 
                 asset.ReadFrom(ms);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error inflating entry {entry.Path}");
+                Console.WriteLine(e);
+                throw;
+            }
+            finally // Always return rented buffer
+            {
+                ArrayPool<byte>.Shared.Return(inflatebuffer);
             }
 
             return asset;
@@ -158,7 +201,7 @@ namespace Rocksmith2014PsarcLib.Psarc
 
         public List<T> InflateEntries<T>(Func<PsarcTOCEntry, bool> where) where T : PsarcAsset, new()
         {
-            List<T> inflatedEntries = new List<T>();
+            var inflatedEntries = new List<T>();
 
             var entries = TOC.Entries.Where(where);
 
@@ -171,9 +214,12 @@ namespace Rocksmith2014PsarcLib.Psarc
         }
 
         #region Convenience Zone
+
         public DdsAsset ExtractAlbumArt(SongArrangement.ArrangementAttributes attr)
         {
-            var entry = TOC.Entries.FirstOrDefault(a => a.Path == "gfxassets/album_art/" + attr.AlbumArt.Substring(14) + "_256.dds");
+            string artPath = $"gfxassets/album_art/{attr.AlbumArt.Substring(14)}_256.dds";
+
+            var entry = TOC.Entries.FirstOrDefault(a => a.Path == artPath);
 
             if (entry == null) throw new KeyNotFoundException();
 
@@ -203,10 +249,13 @@ namespace Rocksmith2014PsarcLib.Psarc
 
             return list.Select(l => l.JsonObject).ToList();
         }
+
         #endregion
 
         #region Disposable
+
         private bool disposedValue;
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
@@ -214,8 +263,8 @@ namespace Rocksmith2014PsarcLib.Psarc
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects)
-                    _reader.Dispose();
-                    _fileStream.Dispose();
+                    Reader.Dispose();
+                    FileStream.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -237,6 +286,7 @@ namespace Rocksmith2014PsarcLib.Psarc
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+
         #endregion
     }
 }
