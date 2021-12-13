@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Rocksmith2014PsarcLib.ReaderExtensions;
 
 namespace Rocksmith2014PsarcLib.Psarc.Models.Sng
 {
@@ -14,9 +15,7 @@ namespace Rocksmith2014PsarcLib.Psarc.Models.Sng
             LevelBreak = reader.ReadInt32();
             PhraseCount = reader.ReadInt32();
 
-            NLD_Phrase = new int[PhraseCount];
-
-            for (var i = 0; i < NLD_Phrase.Length; i++) NLD_Phrase[i] = reader.ReadInt32();
+            NLD_Phrase = reader.ReadIntArray(PhraseCount);
 
             return this;
         }

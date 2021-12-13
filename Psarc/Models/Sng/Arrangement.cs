@@ -83,8 +83,7 @@ namespace Rocksmith2014PsarcLib.Psarc.Models.Sng
             PhraseId = reader.ReadInt32();
             PhraseIterationId = reader.ReadInt32();
 
-            FingerPrintId = new short[2];
-            for (var i = 0; i < 2; i++) FingerPrintId[i] = reader.ReadInt16();
+            FingerPrintId = reader.ReadShortArray(2);
 
             NextIterNote = reader.ReadInt16();
             PrevIterNote = reader.ReadInt16();
