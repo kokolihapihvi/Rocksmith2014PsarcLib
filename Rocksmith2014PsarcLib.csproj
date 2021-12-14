@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-    <LangVersion>9</LangVersion>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <LangVersion>10</LangVersion>
     <Platforms>AnyCPU;x64</Platforms>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
