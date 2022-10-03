@@ -190,7 +190,7 @@ namespace Rocksmith2014PsarcLib.Psarc.Models.Json
             public string FullName { get; set; }
             public string LastConversionDateTime { get; set; }
 
-            public int LeaderboardChallengeRating { get; set; }
+            public int? LeaderboardChallengeRating { get; set; }
 
             public string ManifestUrn { get; set; }
 
