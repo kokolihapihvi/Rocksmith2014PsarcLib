@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Rocksmith2014PsarcLib": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}

@@ -119,7 +119,7 @@ namespace Rocksmith2014PsarcLib.Psarc.Models.Json
                 public bool IsSolo { get; set; }
             }
 
-            [Serializable]
+             [Serializable]
             public class Tone
             {
                 [Serializable]
@@ -264,6 +264,16 @@ namespace Rocksmith2014PsarcLib.Psarc.Models.Json
 
             public string PersistentID { get; set; }
         }
+
+        [Serializable]
+        public class Vocal
+        {
+            public float Time { get; set; }
+            public int Note { get; set; }
+            public float Length { get; set; }
+            public string Lyric { get; set; }
+        }
+        public List<Vocal> Vocals { get; set; }
 
         public ArrangementAttributes Attributes { get; private set; }
 
