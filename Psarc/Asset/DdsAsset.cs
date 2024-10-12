@@ -40,7 +40,7 @@ namespace Rocksmith2014PsarcLib.Psarc.Asset
         {
             base.ReadFrom(stream);
 
-            using var image = Pfim.Pfim.FromStream(stream, config);
+            using var image = Pfimage.FromStream(stream, config);
             PixelFormat format;
 
             switch (image.Format)
