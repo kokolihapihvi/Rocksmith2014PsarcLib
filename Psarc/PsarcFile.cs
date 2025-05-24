@@ -219,10 +219,7 @@ namespace Rocksmith2014PsarcLib.Psarc
         {
             string artPath = $"gfxassets/album_art/{attr.AlbumArt.Substring(14)}_256.dds";
 
-            var entry = TOC.Entries.FirstOrDefault(a => a.Path == artPath);
-
-            if (entry == null) throw new KeyNotFoundException();
-
+            var entry = TOC.Entries.FirstOrDefault(a => a.Path == artPath) ?? throw new KeyNotFoundException("Could not extract album art.");
             return InflateEntry<DdsAsset>(entry);
         }
 
