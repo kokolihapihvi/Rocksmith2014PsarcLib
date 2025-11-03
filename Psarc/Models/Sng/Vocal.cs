@@ -8,7 +8,9 @@ namespace Rocksmith2014PsarcLib.Psarc.Models.Sng
         public int Note;
         public float Length;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 48)]
-        public string Lyric;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 48)]
+        public byte[] LyricBytes;
+        
+        public string Lyric => System.Text.Encoding.UTF8.GetString(LyricBytes);
     }
 }
