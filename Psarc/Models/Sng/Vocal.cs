@@ -11,6 +11,6 @@ namespace Rocksmith2014PsarcLib.Psarc.Models.Sng
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 48)]
         public byte[] LyricBytes;
         
-        public string Lyric => System.Text.Encoding.UTF8.GetString(LyricBytes);
+        public string Lyric => System.Text.Encoding.UTF8.GetString(LyricBytes).TrimEnd('\0');
     }
 }
